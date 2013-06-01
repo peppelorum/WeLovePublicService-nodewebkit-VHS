@@ -1,0 +1,67 @@
+<html>
+<head>
+    <title>WeLovePublicService - VHS v3</title>
+    <script src="jquery-1.8.3.min.js"></script>
+    <script>
+        var sys = require('sys');
+        var ffmpeg = require('fluent-ffmpeg'),
+                fs = require('fs');
+
+        var pirateplayAPI = 'http://pirateplay.se/api/get_streams.js?url=';
+
+        function doTheStuff(svtplayurl, filepath) {
+
+            var url;
+
+            var xhr = function() {
+                return $.get(
+                    svtplayurl,
+                    function(data) {
+                        url = data[0].url;
+                    }
+                );
+            };
+
+            $.when(xhr())
+            .done(
+            function(a) {
+                var stream = fs.createWriteStream(filepath);
+
+                var proc = new ffmpeg({ source: url, nolog: true, timeout: 60*60*10 })
+                    .usingPreset('flashvideo')
+.                   onProgress(function(progress) {
+                        $('#message').text(progress.percent.toFixed(2).toString() + '% done!');
+//                        sys.puts(progress.percent.toFixed(2));
+                    })
+                    .writeToStream(stream, function(retcode, error){
+                        $('#message').text('File has been converted succesfully and saved to '+ filepath);
+                    });
+            });
+        }
+
+        $(document).ready(function(){
+            $('#go').click(function() {
+                sys.puts(pirateplayAPI + $('#svtplayurl').val());
+                doTheStuff(pirateplayAPI + $('#svtplayurl').val(), $('#filepicker').val());
+            });
+        })
+    </script>
+</head>
+<body>
+    <h1>WeLovePublicService VHS v3!</h1>
+
+    <label>
+        Ange SVT Play-url:
+        <input type="text" id="svtplayurl">
+    </label>
+
+    <label>
+        Ange vart filen ska sparas:
+        <input type="file" id="filepicker" nwsaveas />
+    </label>
+
+    <input type="submit" id="go" value="GO!">
+
+    <div id="message"></div>
+</body>
+</html>

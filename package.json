@@ -1,0 +1,7 @@
+{
+    "name": "WLPS - VHS v3",
+    "main": "index.html",
+    "window": {
+        "toolbar": false
+    }
+}
