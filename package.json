@@ -1,7 +1,9 @@
 {
-    "name": "WLPS - VHS v3",
+    "name": "WeLovePublicService - VHS v3",
     "main": "index.html",
     "window": {
-        "toolbar": false
+        "title": "WeLovePublicService - VHS v3",
+        "icon": "static/images/vhs-128.png",
+        "toolbar": true
     }
 }

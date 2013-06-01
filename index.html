@@ -1,67 +1,150 @@
 <html>
 <head>
     <title>WeLovePublicService - VHS v3</title>
-    <script src="jquery-1.8.3.min.js"></script>
-    <script>
-        var sys = require('sys');
-        var ffmpeg = require('fluent-ffmpeg'),
-                fs = require('fs');
+    <link href="static/bootstrap2/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="static/bootstrap2/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
+    <link href="static/css/style.css" rel="stylesheet" media="screen">
+    <script src="static/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript">
+        try {
+            var sys = require('sys');
+            var ffmpeg = require('fluent-ffmpeg');
+            var fs = require('fs');
 
-        var pirateplayAPI = 'http://pirateplay.se/api/get_streams.js?url=';
+        } catch(err) {
+            console.log(err);
+        }
 
-        function doTheStuff(svtplayurl, filepath) {
+        var vhsLib = function(){
+            var that = this;
 
-            var url;
+            that.pirateplayAPI = 'http://pirateplay.se/api/get_streams.js?url=';
+            that.json = '';
+            that.url = '';
 
-            var xhr = function() {
-                return $.get(
+            that.init = function() {
+                $('#go').click(function() {
+                    that.doTheStuff($('#filepicker').val());
+                });
+
+                $('#svtplayurl').change(function() {
+                    that.getQualities(that.pirateplayAPI + $('#svtplayurl').val());
+                    that.url = '';
+                    $('#go').attr('disabled', true).addClass('disabled');
+                });
+
+                $('#quality').change(function() {
+                    var quality = $(this).find(':selected').text();
+                    for (var i = 0; i < that.json.length; i++) {
+                        if (that.json[i].meta.quality === quality) {
+                            that.url = that.json[i].url;
+                        }
+                    }
+                    $('#go').removeAttr('disabled').removeClass('disabled');
+                });
+            };
+
+            that.getQualities = function(svtplayurl) {
+
+                $('.loader').show();
+
+                $.get(
                     svtplayurl,
                     function(data) {
-                        url = data[0].url;
+                        var options = '';
+                        for (var i = 0; i < data.length; i++) {
+                            options += '<option>'+ data[i].meta.quality +'</option>';
+                        }
+                        $('#quality').html(options);
+                        that.json = data;
+                        $('.loader').hide();
                     }
                 );
             };
 
-            $.when(xhr())
-            .done(
-            function(a) {
+            that.doTheStuff = function(filepath) {
                 var stream = fs.createWriteStream(filepath);
 
-                var proc = new ffmpeg({ source: url, nolog: true, timeout: 60*60*10 })
+                $('.progress').show();
+                $('#go').hide();
+
+                var proc = new ffmpeg({ source: that.url, nolog: true, timeout: 60*60*10 })
                     .usingPreset('flashvideo')
-.                   onProgress(function(progress) {
-                        $('#message').text(progress.percent.toFixed(2).toString() + '% done!');
-//                        sys.puts(progress.percent.toFixed(2));
-                    })
-                    .writeToStream(stream, function(retcode, error){
-                        $('#message').text('File has been converted succesfully and saved to '+ filepath);
-                    });
-            });
-        }
+                        .onProgress(function(progress) {
+//                            sys.puts(progress.percent.toFixed(2).toString() + '% done!');
+                            $('#message').text(progress.percent.toFixed(2).toString() + '% done!');
+                            $('.bar').css('width', progress.percent.toFixed(2).toString() +'%');
+                        })
+                        .writeToStream(stream, function(retcode, error){
+                            $('#message').text('File has been converted succesfully and saved to '+ filepath);
+                            $('.progress').hide();
+                            $('#go').show();
+                        });
+            };
+        };
+
+        var vhs = new vhsLib();
 
         $(document).ready(function(){
-            $('#go').click(function() {
-                sys.puts(pirateplayAPI + $('#svtplayurl').val());
-                doTheStuff(pirateplayAPI + $('#svtplayurl').val(), $('#filepicker').val());
-            });
-        })
+
+            vhs.init();
+
+        });
     </script>
 </head>
 <body>
-    <h1>WeLovePublicService VHS v3!</h1>
 
-    <label>
-        Ange SVT Play-url:
-        <input type="text" id="svtplayurl">
-    </label>
+    <div class="container">
 
-    <label>
-        Ange vart filen ska sparas:
-        <input type="file" id="filepicker" nwsaveas />
-    </label>
+        <div class="row-fluid logo">
+            <div class="span12">
+                <img src="static/images/logo.png">
+            </div>
+        </div>
 
-    <input type="submit" id="go" value="GO!">
+        <div class="row-fluid content">
+            <div class="span12">
+                <div class="form-horizontal">
+                    <div class="control-group">
+                        <label class="control-label" for="svtplayurl">SVT Play-URL</label>
 
-    <div id="message"></div>
+                        <div class="controls">
+                            <input type="text" id="svtplayurl" placeholder="URL">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="quality">V&auml;lj kvalitet p&aring; streamen</label>
+
+                        <div class="controls">
+                            <select id="quality"></select><img src="static/images/ajax-loader.gif" class="loader" style="display: none">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="filepicker">Ange vart filen ska sparas</label>
+
+                        <div class="controls">
+                            <input type="file" id="filepicker" nwsaveas />
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="controls">
+                            <input type="submit" id="go" value="GO!" class="btn disabled" disabled>
+
+                            <div class="progress progress-success progress-striped active" style="display: none;">
+                                <div class="bar" style="width: 0%"></div>
+                            </div>
+
+                            <div id="message"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+    </div>
+
 </body>
 </html>
